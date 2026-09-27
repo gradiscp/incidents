@@ -13,6 +13,7 @@ doesn't know why things are the way they are.
 |---|---|---|---|
 | 2026-09-12 | [Claude Code sessions in herdr render as overlapping garbage](2026-09-12-herdr-claude-fullscreen-garbled.md) | herdr, Claude Code, Hyprland | Mitigated, upstream bug open |
 | 2026-09-13 | [Claude Code session hung on a 30-minute import run in the foreground](2026-09-13-shop-scraper-import-hung-claude-session.md) | Claude Code, valiora shop-scraper, logging | Resolved |
+| 2026-09-25 | [systemd-oomd killed the terminal running Claude Code, three times](2026-09-25-oomd-killed-terminal-parallel-agents.md) | Claude Code subagents, systemd-oomd, Astro builds | Mitigated |
 
 ## How these are written
 
