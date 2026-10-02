@@ -1,19 +1,23 @@
-# 2026-10-01 - Both dock monitors stay black after the dock drops them; only a reboot helps
+# 2026-10-01 - Both dock monitors stay black after the dock resets; re-login fixes it
 
-**Status:** Open (workaround: reboot)
-**Area:** Hyprland / aquamarine, i915 DP MST, USB-C dock, idle blanking
+**Status:** Open (workaround: log out and back in)
+**Area:** Hyprland / aquamarine, i915 DP MST, USB-C dock
 
 ## Summary
 
-Both external monitors on the USB-C dock went dark whenever the mouse moved,
-then stayed black. Hyprland still listed them, but the kernel rejected every
-mode it tried for them, down to 720x400. Unplugging and replugging the dock
-and `hyprctl reload` changed nothing; a reboot brought both back. It has
-happened before (per the owner, not recorded); this is the first write-up.
+When the USB-C dock resets - reproduced on 2026-10-02 by pulling the dock's
+power cable - its two monitors come back under new connector names and stay
+black: Hyprland lists them, but every modeset it tries is rejected with
+`EINVAL`, down to 720x400. Replugging the dock and `hyprctl reload` do not
+help. Logging out and back in (new Hyprland, same boot) brings both back on
+the very same connectors, so the stuck state lives in the running Hyprland /
+aquamarine instance. It has happened before (per the owner, not recorded).
 
 ## Impact
 
-- Both external monitors unusable until a reboot, roughly 13:00-13:21.
+- 2026-10-01: both external monitors unusable until a reboot, roughly
+  13:00-13:21.
+- 2026-10-02: unusable for about 5 minutes (06:38-06:43), until a re-login.
 - Laptop panel (eDP-1) kept working throughout. Nothing lost.
 - Dock USB devices (keyboard, mouse, Ethernet) came back after each replug;
   only the displays did not.
@@ -34,6 +38,8 @@ happened before (per the owner, not recorded); this is the first write-up.
 The Hyprland log has no timestamps; its line numbers give the order. Clock
 times are from `journalctl` unless marked.
 
+### 2026-10-01
+
 - Boot - DP-6 modeset 1920x1080@60, DP-7 1920x1080@144 (log l. 397, 513)
 - Morning - normal use with both monitors
 - Unknown time - eDP-1, DP-6 and DP-7 all disabled together, then re-enabled
@@ -53,29 +59,60 @@ times are from `journalctl` unless marked.
 - 13:21:07 - reboot (`uptime -s`); monitors back as DP-6 1080p@60 and
   DP-7 1080p@144
 
+### 2026-10-02
+
+- 06:35:51 - boot; DP-6 / DP-7 modeset normally (Hyprland log l. 410, 425)
+- 06:38:47 - owner pulls the power cable that feeds the dock (and the laptop
+  through it). Every USB device on the dock disconnects at once and is back
+  at 06:38:48-53 - the whole dock reset. No display blanking before it.
+- Directly after - DP-6 / DP-7 removed (l. 502), DP-8 / DP-9 added (l. 662,
+  912), every modeset fails again (604 failed commits by 06:40)
+- 06:41 - logs saved to `~/.cache/hyprland/dock-dropout-2026-10-02-*.log`
+- ~06:43 (est.) - owner logs out and back in; new Hyprland started 06:43:45
+  (`uwsm_hyprland.desktop: Starting: /usr/bin/start-hyprland`)
+- 06:44 - both monitors running on DP-8 1080p@60 and DP-9 1080p@144, scale
+  1.25, same boot (`uptime -s` still 06:35:51)
+
 ## Root cause
 
-Not established. What is shown: after the dock's MST connectors were torn
-down and re-created as DP-8 / DP-9, the kernel rejected every atomic modeset
-for them with `EINVAL`, for all 31-36 modes including 640x480 and 720x400.
-That rules out a bandwidth or mode problem on the Hyprland side and points at
-stale state in the display stack (i915 MST or aquamarine) that only a reboot
-cleared.
+Partly established.
 
-The trigger is suspected, not proven: the drop happened right after all three
-displays were blanked and woken together, and the owner's symptom (dark on
-mouse move) matches a wake. See Unverified.
+- **Trigger: the dock resets.** On 2026-10-02 pulling its power cable reset
+  the whole dock (all its USB devices dropped at 06:38:47). The kernel then
+  tears down the MST connectors and creates new ones (DP-6 / DP-7 ->
+  DP-8 / DP-9). On 2026-10-01 the same re-numbering happened; what reset the
+  dock that time is not known (see Unverified).
+- **Failure: the running compositor cannot use the new connectors.** Every
+  atomic commit aquamarine builds for DP-8 / DP-9 is rejected with `EINVAL`,
+  for all 31-36 modes including 640x480 and 720x400, so it is not a bandwidth
+  or mode problem.
+- **The stuck state is in the running Hyprland / aquamarine instance.** A new
+  Hyprland in the same boot drove the very same DP-8 / DP-9 connectors at
+  once. What exactly is stale (CRTC assignment, a cached property ID, ...) is
+  not known; the kernel's own state is reset when a new DRM master takes over,
+  so a kernel-side part is not fully excluded.
 
 ## Evidence
 
-Saved before the reboot (`/run/user` is wiped on reboot):
+Saved before recovering (`/run/user` is wiped on reboot and the log is
+replaced on re-login):
 
-- `~/.cache/hyprland/dock-dropout-2026-10-01-hyprland.log` - Hyprland log of
-  the failing session
-- `~/.cache/hyprland/dock-dropout-2026-10-01-kernel.log` - `journalctl -k -b`
-  of the same boot
+- `~/.cache/hyprland/dock-dropout-2026-10-01-hyprland.log` and
+  `...-2026-10-01-kernel.log` - first occurrence
+- `~/.cache/hyprland/dock-dropout-2026-10-02-hyprland.log` and
+  `...-2026-10-02-kernel.log` - power-cable occurrence
 
-In the Hyprland log:
+Dock reset on 2026-10-02, kernel log:
+
+```
+06:38:47 kernel: usb 3-3: USB disconnect, device number 2
+06:38:47 kernel: usb 4-2: USB disconnect, device number 2
+06:38:47 kernel: r8152-cfgselector 4-2.3: USB disconnect, device number 3
+06:38:48 kernel: usb 3-3: New USB device found, idVendor=2109, idProduct=2817
+06:38:48 kernel: usb 4-2: New USB device found, idVendor=2109, idProduct=0817
+```
+
+Hyprland log of the first occurrence (2026-10-01):
 
 ```
 drm: eDP-1 is disabled, releasing crtc 171          (l. 12125)
@@ -108,8 +145,18 @@ connected
 disabled
 ```
 
-The kernel log at default level has no i915 / DRM error for this; only the
-USB disconnect / reconnect of the dock at 13:03.
+The kernel log at default level has no i915 / DRM error for this, on either
+day; only the USB disconnect / reconnect of the dock.
+
+After the re-login on 2026-10-02, same boot:
+
+```
+$ uptime -s
+2026-10-02 06:35:51
+$ hyprctl monitors -j | jq ...
+DP-8 AW2521HFA 1920x1080@60.00000 scale=1.25
+DP-9 LS24AG30x 1920x1080@143.99800 scale=1.25
+```
 
 ## What didn't work
 
@@ -122,31 +169,36 @@ USB disconnect / reconnect of the dock at 13:03.
 
 ## Resolution
 
-Reboot. Logging out and back in (restarts Hyprland, not the kernel) was not
-tried, so it is unknown whether that would be enough.
+Log out and back in. That restarts Hyprland and is enough (2026-10-02). A
+reboot also works (2026-10-01) but is not needed.
 
 ## Unverified
 
-- That the blank-and-wake was the screensaver or the lock (`omarchy-system-lock`
-  blanks the displays). The log shows all three displays disabled and
-  re-enabled together, which fits, but has no timestamps to tie it to the idle
-  events.
-- Whether the stale state is in the kernel (i915 MST) or in aquamarine. A
-  re-login would tell: if it helps, the kernel side is fine.
-- Whether the idle values changed earlier that day (120/180 s -> 300/420 s)
-  matter. Probably not; the earlier occurrences predate the change.
+- What reset the dock on 2026-10-01. That day all displays were blanked and
+  woken just before the drop and the owner saw "dark on mouse move", so idle
+  blanking was the first suspect. The 2026-10-02 case had no blanking at all,
+  so blanking is at most one of several ways to reset the dock, not the cause
+  of the stuck state.
+- That the dock resets *because* it loses its power input. It fits (it
+  carries the laptop's charging and has no other supply), but only the
+  timing is shown.
+- Whether this is a known Hyprland / aquamarine bug. Upstream issues were
+  not searched yet.
 - The dock model; `lsusb` is not installed. USB IDs from the kernel log:
   hub `2109:2817` / `2109:0817`, Ethernet `0bda:8153`.
 
 ## Prevention
 
-None yet. Next time it happens:
+No fix yet; a workaround and a habit.
 
-1. Before rebooting, note whether it followed the screensaver or lock.
-2. Save `$XDG_RUNTIME_DIR/hypr/*/hyprland.log` and `journalctl -k -b`
-   before rebooting.
-3. Try logging out and back in before a full reboot.
+- Pull or plug the dock's power cable only while the laptop is off or
+  suspended.
+- If the monitors stay black after a dock reset: log out and back in
+  (`omarchy logout`, which runs `uwsm stop`). Do not bother replugging the
+  dock, `hyprctl reload` or `omarchy restart hyprctl` (the same reload).
+- If it happens again, save `$XDG_RUNTIME_DIR/hypr/*/hyprland.log` before
+  logging out (the re-login replaces it) and note what happened right before.
 
-If blank-and-wake is confirmed as the trigger, candidates are leaving the
-external monitors out of the idle blanking or reporting it upstream
-(Hyprland / aquamarine or i915). Both need the owner's decision.
+Open: search Hyprland / aquamarine upstream issues for MST connectors that
+cannot be modeset after a hotplug, and report it with the saved logs if it is
+not known. That needs the owner's go-ahead.

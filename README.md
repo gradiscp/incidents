@@ -14,7 +14,7 @@ doesn't know why things are the way they are.
 | 2026-09-12 | [Claude Code sessions in herdr render as overlapping garbage](2026-09-12-herdr-claude-fullscreen-garbled.md) | herdr, Claude Code, Hyprland | Mitigated, upstream bug open |
 | 2026-09-13 | [Claude Code session hung on a 30-minute import run in the foreground](2026-09-13-shop-scraper-import-hung-claude-session.md) | Claude Code, valiora shop-scraper, logging | Resolved |
 | 2026-09-25 | [systemd-oomd killed the terminal running Claude Code, three times](2026-09-25-oomd-killed-terminal-parallel-agents.md) | Claude Code subagents, systemd-oomd, Astro builds | Mitigated |
-| 2026-10-01 | [Both dock monitors stay black after the dock drops them; only a reboot helps](2026-10-01-dock-monitors-dead-after-wake.md) | Hyprland, i915 DP MST, USB-C dock, idle blanking | Open, workaround: reboot |
+| 2026-10-01 | [Both dock monitors stay black after the dock resets; re-login fixes it](2026-10-01-dock-monitors-dead-after-wake.md) | Hyprland / aquamarine, i915 DP MST, USB-C dock | Open, workaround: re-login |
 
 ## How these are written
 
