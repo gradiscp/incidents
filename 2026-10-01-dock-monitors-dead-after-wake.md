@@ -18,6 +18,8 @@ aquamarine instance. It has happened before (per the owner, not recorded).
 - 2026-10-01: both external monitors unusable until a reboot, roughly
   13:00-13:21.
 - 2026-10-02: unusable for about 5 minutes (06:38-06:43), until a re-login.
+- 2026-10-02: again about 11 minutes (13:00-13:11) after replugging the
+  dock's USB-C cable, until a re-login.
 - Laptop panel (eDP-1) kept working throughout. Nothing lost.
 - Dock USB devices (keyboard, mouse, Ethernet) came back after each replug;
   only the displays did not.
@@ -30,7 +32,7 @@ aquamarine instance. It has happened before (per the owner, not recorded).
 | Compositor | Hyprland 0.56.2, aquamarine 0.15.0 |
 | Dock | USB-C dock with DP MST; monitors appear as DP-6 / DP-7 (later DP-8 / DP-9) |
 | Monitors | Dell AW2521HFA (1080p@60), Samsung LS24AG30x (1080p@144) |
-| Monitor config | single catch-all rule: `mode = "preferred"`, `position = "auto"`, scale 1.25 |
+| Monitor config | single catch-all rule: `mode = "preferred"`, `position = "auto"`, scale 1.25; since 2026-10-02 13:11 also a `desc:` rule pinning the Samsung to 1080p@60 (dotfiles `config/hypr/monitors.lua`) |
 | Idle | `gradiscp.idle`: screensaver after 300 s, lock (`omarchy-system-lock`, blanks the displays) after 420 s; values changed earlier the same day from 120 / 180 |
 
 ## Timeline
@@ -72,13 +74,26 @@ times are from `journalctl` unless marked.
   (`uwsm_hyprland.desktop: Starting: /usr/bin/start-hyprland`)
 - 06:44 - both monitors running on DP-8 1080p@60 and DP-9 1080p@144, scale
   1.25, same boot (`uptime -s` still 06:35:51)
+- Later in the morning a separate problem (sparkles and short blackouts on
+  both monitors, no log entries) was traced to the dock link running near its
+  bandwidth limit; the Samsung was set to 60 Hz as a test. Not part of this
+  incident, see the 2026-10-02 sparkle incident if one was written.
+- 13:00:36 and 13:07:30 - owner unplugs and replugs the dock's USB-C cable at
+  the laptop (`usb 3-3` / `usb 4-2: USB disconnect`, back at 13:01:03 and
+  ~13:07:36). Monitors come back as DP-6 / DP-7, `0x0@60`, 1196 failed
+  commits by 13:08; logs saved to `~/.cache/hyprland/replug-2026-10-02-1308-*`
+- 13:11:23 - owner logs out; the old Hyprland segfaults on exit at the same
+  aquamarine frame as at 06:43 (`coredumpctl info 25195`)
+- 13:11:39 - new Hyprland; both monitors running again (DP-8 / DP-9, 0 failed
+  commits), same boot
 
 ## Root cause
 
 Partly established.
 
 - **Trigger: the dock resets.** On 2026-10-02 pulling its power cable reset
-  the whole dock (all its USB devices dropped at 06:38:47). The kernel then
+  the whole dock (all its USB devices dropped at 06:38:47); at 13:00 and
+  13:07 replugging only the dock's USB-C cable at the laptop did the same. The kernel then
   tears down the MST connectors and creates new ones (DP-6 / DP-7 ->
   DP-8 / DP-9). On 2026-10-01 the same re-numbering happened; what reset the
   dock that time is not known (see Unverified).
@@ -148,6 +163,22 @@ disabled
 The kernel log at default level has no i915 / DRM error for this, on either
 day; only the USB disconnect / reconnect of the dock.
 
+The re-login on 2026-10-02 crashed the old Hyprland on its way out
+(`coredumpctl info 1157`); a second Hyprland (PID 24880, UID 962) crashed
+at 06:43:42, its core is not readable:
+
+```
+06:43:29 SIGSEGV /usr/bin/Hyprland (PID 1157)
+#0 Aquamarine::CDRMBackend::flushAsyncCommitEvents()   (libaquamarine.so.14)
+#1 Aquamarine::CDRMBackend::cancelAsyncOutput(...)
+#2 Aquamarine::SDRMConnector::disconnect()
+#3 Aquamarine::CDRMBackend::~CDRMBackend()
+```
+
+The crash is in aquamarine's DRM backend teardown, the same component that
+rejects the commits. It did no harm here (the session was being replaced
+anyway).
+
 After the re-login on 2026-10-02, same boot:
 
 ```
@@ -182,23 +213,43 @@ reboot also works (2026-10-01) but is not needed.
 - That the dock resets *because* it loses its power input. It fits (it
   carries the laptop's charging and has no other supply), but only the
   timing is shown.
-- Whether this is a known Hyprland / aquamarine bug. Upstream issues were
-  not searched yet.
-- The dock model; `lsusb` is not installed. USB IDs from the kernel log:
-  hub `2109:2817` / `2109:0817`, Ethernet `0bda:8153`.
+- Whether this is a known Hyprland / aquamarine bug. Closest match found on
+  2026-10-02: [aquamarine #428](https://github.com/hyprwm/aquamarine/issues/428)
+  (opened 2026-09-29, open). Same versions (Hyprland 0.56.2, aquamarine
+  0.15.0) and the same symptoms: monitors at 0x0 after a DP hotplug, every
+  commit `EINVAL`, `hyprctl reload` does not help, a compositor restart
+  does. The reporter's cause: `CDRMBackend::recheckCRTCs()` hands
+  reconnecting connectors different CRTCs than the kernel has bound. It is
+  reported on NVIDIA only; that it is the same bug on i915 with an MST dock
+  is not shown.
+- What the ACPI event `samsung-galaxybook SAM0428:00: unknown ACPI
+  notification event: 0x42` means. It appeared each time the dock came back
+  on 2026-10-01 (10:08:05, 13:03:47, 13:14:22, right after `usb 3-3: new
+  high-speed USB device`), but not after the 2026-10-02 06:38 power-cable
+  reset, and once more on 2026-10-02 08:27:20 with no dock USB change at
+  all. So it is tied to the dock's power path somehow, not a reliable
+  "dock reset" marker. (The `0x71` events recur all day and are unrelated.)
+- The exact dock model. `/sys/bus/usb/devices/3-3.5` reports
+  `291a:8380`, manufacturer `Anker`, product `Anker USB C Hub LX`; Anker
+  uses the SKU as product ID, which makes it the Anker 553 USB-C Hub
+  (8-in-1, A8380): 2x HDMI, rated "dual 2K@60", 85 W PD pass-through. The
+  SKU-to-PID mapping is inferred, not confirmed by Anker. Internal hubs
+  `2109:2817` / `2109:0817` (VIA Labs), Ethernet `0bda:8153`.
 
 ## Prevention
 
 No fix yet; a workaround and a habit.
 
-- Pull or plug the dock's power cable only while the laptop is off or
-  suspended.
+- Pull or plug the dock's power cable, or its USB-C cable at the laptop,
+  only while the laptop is off or suspended. Both reset the dock
+  (2026-10-02, 06:38 and 13:00/13:07).
 - If the monitors stay black after a dock reset: log out and back in
   (`omarchy logout`, which runs `uwsm stop`). Do not bother replugging the
   dock, `hyprctl reload` or `omarchy restart hyprctl` (the same reload).
 - If it happens again, save `$XDG_RUNTIME_DIR/hypr/*/hyprland.log` before
   logging out (the re-login replaces it) and note what happened right before.
 
-Open: search Hyprland / aquamarine upstream issues for MST connectors that
-cannot be modeset after a hotplug, and report it with the saved logs if it is
-not known. That needs the owner's go-ahead.
+Open: add the i915 / MST case with the saved logs to
+[aquamarine #428](https://github.com/hyprwm/aquamarine/issues/428), or open a
+separate issue if the maintainers say it is a different bug. That needs the
+owner's go-ahead.
