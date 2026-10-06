@@ -15,6 +15,7 @@ doesn't know why things are the way they are.
 | 2026-09-13 | [Claude Code session hung on a 30-minute import run in the foreground](2026-09-13-shop-scraper-import-hung-claude-session.md) | Claude Code, valiora shop-scraper, logging | Resolved |
 | 2026-09-25 | [systemd-oomd killed the terminal running Claude Code, three times](2026-09-25-oomd-killed-terminal-parallel-agents.md) | Claude Code subagents, systemd-oomd, Astro builds | Mitigated |
 | 2026-10-01 | [Both dock monitors stay black after the dock resets; re-login fixes it](2026-10-01-dock-monitors-dead-after-wake.md) | Hyprland / aquamarine, i915 DP MST, USB-C dock | Open, workaround: re-login |
+| 2026-10-06 | [CI red on the first push to main: paths-filter could not fetch the previous commit](2026-10-06-ci-paths-filter-first-push-to-main.md) | GitHub Actions CI, dorny/paths-filter, actions/checkout | Resolved |
 
 ## How these are written
 
