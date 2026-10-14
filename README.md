@@ -16,6 +16,9 @@ doesn't know why things are the way they are.
 | 2026-09-25 | [systemd-oomd killed the terminal running Claude Code, three times](2026-09-25-oomd-killed-terminal-parallel-agents.md) | Claude Code subagents, systemd-oomd, Astro builds | Mitigated |
 | 2026-10-01 | [Both dock monitors stay black after the dock resets; re-login fixes it](2026-10-01-dock-monitors-dead-after-wake.md) | Hyprland / aquamarine, i915 DP MST, USB-C dock | Open, workaround: re-login |
 | 2026-10-06 | [CI red on the first push to main: paths-filter could not fetch the previous commit](2026-10-06-ci-paths-filter-first-push-to-main.md) | GitHub Actions CI, dorny/paths-filter, actions/checkout | Resolved |
+| 2026-10-12 | [OAuth login fails with "Login required" although the account is fine](2026-10-12-oauth-login-required-stale-vendor-session.md) | Third-party OAuth, browser session | Resolved |
+| 2026-10-12 | [Easy Auth silently rejected a POST with 403 (sub-status 60)](2026-10-12-easy-auth-csrf-403-60-post.md) | Azure Container Apps Easy Auth, CSRF, Referrer-Policy | Mitigated, fix pending deploy |
+| 2026-10-13 | [One-time signing tokens reached the central log through the sign-in sidecar](2026-10-13-signing-tokens-in-sidecar-logs.md) | Azure Container Apps Easy Auth sidecar, Log Analytics, one-time links | Mitigated, fix pending deploy |
 
 ## How these are written
 
