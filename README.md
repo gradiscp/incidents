@@ -20,6 +20,9 @@ doesn't know why things are the way they are.
 | 2026-10-12 | [Easy Auth silently rejected a POST with 403 (sub-status 60)](2026-10-12-easy-auth-csrf-403-60-post.md) | Azure Container Apps Easy Auth, CSRF, Referrer-Policy | Mitigated, fix pending deploy |
 | 2026-10-13 | [One-time signing tokens reached the central log through the sign-in sidecar](2026-10-13-signing-tokens-in-sidecar-logs.md) | Azure Container Apps Easy Auth sidecar, Log Analytics, one-time links | Mitigated, fix pending deploy |
 | 2026-10-14 | [Cleanup job failed every 20 minutes on a record stored before a deploy](2026-10-14-cleanup-job-failed-on-record-stored-before-deploy.md) | Pydantic `extra="forbid"`, stored JSON records, Container Apps job, missing alert | Mitigated, fix pending deploy |
+| 2026-10-15 | [A package the dotfiles remove on purpose was back for three weeks, unnoticed](2026-10-15-removed-package-came-back-unnoticed.md) | dotfiles remove-unwanted-apps.sh, omarchy-drift-check, pacman | Resolved |
+| 2026-10-15 | [Tools wrote through dotfiles symlinks straight into the public repo](2026-10-15-tools-wrote-through-symlinks-into-public-repo.md) | dotfiles symlinks, mise, herdr, Omarchy agents widget, Claude settings.json | Mitigated |
+| 2026-10-15 | [Employer, work account and a private e-mail address were in the public dotfiles repo](2026-10-15-private-work-data-in-public-dotfiles.md) | public dotfiles repo, Claude rules, git config, git history | Mitigated, GitHub PR refs remain |
 
 ## How these are written
 
