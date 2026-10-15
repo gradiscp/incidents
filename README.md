@@ -19,6 +19,7 @@ doesn't know why things are the way they are.
 | 2026-10-12 | [OAuth login fails with "Login required" although the account is fine](2026-10-12-oauth-login-required-stale-vendor-session.md) | Third-party OAuth, browser session | Resolved |
 | 2026-10-12 | [Easy Auth silently rejected a POST with 403 (sub-status 60)](2026-10-12-easy-auth-csrf-403-60-post.md) | Azure Container Apps Easy Auth, CSRF, Referrer-Policy | Mitigated, fix pending deploy |
 | 2026-10-13 | [One-time signing tokens reached the central log through the sign-in sidecar](2026-10-13-signing-tokens-in-sidecar-logs.md) | Azure Container Apps Easy Auth sidecar, Log Analytics, one-time links | Mitigated, fix pending deploy |
+| 2026-10-14 | [Cleanup job failed every 20 minutes on a record stored before a deploy](2026-10-14-cleanup-job-failed-on-record-stored-before-deploy.md) | Pydantic `extra="forbid"`, stored JSON records, Container Apps job, missing alert | Mitigated, fix pending deploy |
 
 ## How these are written
 
